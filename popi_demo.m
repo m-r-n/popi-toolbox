@@ -28,23 +28,37 @@ filename = ['popiLUT_', num2str(mic_dist), 'm_', num2str(minPit), 'Hz_to_',num2s
 load (filename,  "popiLUT_L", "popiLUT_0",  "popiLUT_R");
 
 % -------------------------------------------------------------
-%	Cross correlation 
+%	Cross correlation or AMDF!
 % -------------------------------------------------------------
-sc1 =xcorr(seg1,seg2);%, 'biased');
-sl=sc1/max(sc1);
 
+%sc1 =xcorr(seg1,seg2, 2000, 'biased');
+max_amdf_lag = 633; %derived from.. max(max(popiLUT_R))
+%sc1 =cross_amdf(seg1,seg2, max_amdf_lag);
+sl=sc1/max(abs(sc1));
+sl=-sl;				%trick nr2
 % -------------------------------------------------------------
 % 	PoPi Decomposition
 % -------------------------------------------------------------
 tic
 cut1=sl(popiLUT_L) +  sl(popiLUT_0) + sl(popiLUT_R) ;
 cut1(cut1<0)=0;
+ido1= toc;
+
+tic
+cut2=sl(popiLUT_L) .*  sl(popiLUT_0) .* sl(popiLUT_R) ;
+cut2(cut2<0)=0;
 ido2= toc;
 
+cut3=cut1.*cut2;
+
 disp('---')
-disp (['The decomposition took ', num2str(round(1000000*ido2)), ' micro-sec.']);
+disp (['1st decomposition: ', num2str(round(1000000*ido1)), ' micro-sec.']);
+disp (['2nd decomposition: ', num2str(round(1000000*ido2)), ' micro-sec.']);
 disp('Freq. resolution of Pitch axis: 2Hz, pitch starts at 80Hz!')
 disp('Angular resolution of DoA axis: 2degs')
+
+%seg10=[seg1, seg1];
+%cut1=seg10(popiLUT_L) +  seg10(popiLUT_0) + seg10(popiLUT_R) ;
 
 % -------------------------------------------------------------
 %	Plotting
@@ -60,13 +74,27 @@ disp('Angular resolution of DoA axis: 2degs')
     title ([' channel nr. 2'])
 
     subplot(313)
-    plot(sc1);
+    plot(sl);
     title('Cross-Correlation')
     
     figure(2)
    imagesc(cut1);
    colorbar
-   title ('popiLUT-based decomp: L + O + R')
+   title (' decomp: (L + O + R)')
+   ylabel (['(Pitch - ',num2str(minPit), ')/2 [Hz] '])
+   xlabel (['DoA /2 [deg]'])
+   
+   figure(3)
+   imagesc(cut2);
+   colorbar
+   title ('  decomp: (L * O * R)')
+   ylabel (['(Pitch - ',num2str(minPit), ')/2 [Hz] '])
+   xlabel (['DoA /2 [deg]'])
+   
+   figure(4)
+   imagesc(cut3);
+   colorbar
+   title (' decomp: (L + O + R) .* ( L .* O .* R)')
    ylabel (['(Pitch - ',num2str(minPit), ')/2 [Hz] '])
    xlabel (['DoA /2 [deg]'])
     
